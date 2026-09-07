@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Zoom Meeting SDK - Client View POC</title>
+
+<!-- Zoom Web Meeting SDK (Client View) - v6.2.0 -->
+<script src="https://source.zoom.us/6.2.0/lib/vendor/react.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/react-dom.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/react-redux.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/redux.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/redux-thunk.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/zoom-meeting-6.2.0.min.js"></script>
+
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 480px;
+    margin: 40px auto;
+    padding: 0 16px;
+  }
+  h1 { font-size: 1.2rem; }
+  label { display: block; margin-top: 12px; font-size: 0.9rem; }
+  input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    margin-top: 4px;
+  }
+  button {
+    margin-top: 20px;
+    padding: 10px 16px;
+    cursor: pointer;
+  }
+  #error-box {
+    margin-top: 16px;
+    padding: 10px;
+    background: #fdecea;
+    color: #611a15;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    display: none;
+    white-space: pre-wrap;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+  <h1>Zoom Meeting SDK - Client View POC</h1>
+
+  <form id="join-form">
+    <label>
+      Client ID (SDK Key)
+      <input type="text" id="clientId" placeholder="PLACEHOLDER_CLIENT_ID" />
+    </label>
+
+    <label>
+      Meeting Number
+      <input type="text" id="meetingNumber" placeholder="e.g. 1234567890" />
+    </label>
+
+    <label>
+      Passcode
+      <input type="text" id="passcode" placeholder="meeting passcode" />
+    </label>
+
+    <label>
+      Display Name
+      <input type="text" id="displayName" placeholder="your name" />
+    </label>
+
+    <button type="submit" id="join-btn">Join</button>
+  </form>
+
+  <div id="error-box"></div>
+
+  <!-- Zoom SDK requires this element to render the meeting UI -->
+  <div id="zmmtg-root"></div>
+
+  <script>
+    var JWT_ENDPOINT = 'http://localhost:4000/jwt';
+    var LEAVE_URL = 'http://localhost:3000';
+
+    var errorBox = document.getElementById('error-box');
+
+    function showError(err) {
+      var message = typeof err === 'string' ? err : JSON.stringify(err, null, 2);
+      errorBox.textContent = message;
+      errorBox.style.display = 'block';
+      console.error('Zoom join error:', err);
+    }
+
+    function clearError() {
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+    }
+
+    async function getSignature(meetingNumber, role) {
+      var res = await fetch(JWT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meetingNumber: meetingNumber, role: role })
+      });
+
+      if (!res.ok) {
+        throw new Error('Backend /jwt returned HTTP ' + res.status);
+      }
+
+      var data = await res.json();
+      if (!data.signature) {
+        throw new Error('Backend response did not contain a signature');
+      }
+      return data.signature;
+    }
+
+    document.getElementById('join-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      clearError();
+
+      var clientId = document.getElementById('clientId').value.trim();
+      var meetingNumber = document.getElementById('meetingNumber').value.trim();
+      var passcode = document.getElementById('passcode').value.trim();
+      var displayName = document.getElementById('displayName').value.trim();
+
+      if (!clientId || !meetingNumber || !displayName) {
+        showError('Client ID, Meeting Number ve Display Name zorunlu.');
+        return;
+      }
+
+      var joinBtn = document.getElementById('join-btn');
+      joinBtn.disabled = true;
+
+      try {
+        var signature = await getSignature(meetingNumber, 0);
+
+        ZoomMtg.setZoomJSLib('https://source.zoom.us/6.2.0/lib', '/av');
+        ZoomMtg.preLoadWasm();
+        ZoomMtg.prepareWebSDK();
+
+        ZoomMtg.i18n.load('en-US');
+        ZoomMtg.i18n.reload('en-US');
+
+        ZoomMtg.init({
+          leaveUrl: LEAVE_URL,
+          patchJsMedia: true,
+          success: function () {
+            ZoomMtg.join({
+              sdkKey: clientId,
+              signature: signature,
+              meetingNumber: meetingNumber,
+              passWord: passcode,
+              userName: displayName,
+              success: function (res) {
+                console.log('Join success', res);
+                joinBtn.disabled = false;
+              },
+              error: function (err) {
+                showError(err);
+                joinBtn.disabled = false;
+              }
+            });
+          },
+          error: function (err) {
+            showError(err);
+            joinBtn.disabled = false;
+          }
+        });
+      } catch (err) {
+        showError(err.message || err);
+        joinBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
