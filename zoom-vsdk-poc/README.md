@@ -1,39 +1,39 @@
 # Zoom Video SDK — Proof of Concept (POC)
 
-Vanilla JavaScript (ES Modules), HTML5 ve modern Vanilla CSS ile geliştirilmiş, harici framework bağımlılığı olmayan, modüler mimariye sahip Zoom Video SDK entegrasyonu POC projesi.
+A Zoom Video SDK integration POC project built with Vanilla JavaScript (ES Modules), HTML5, and modern Vanilla CSS, featuring a modular architecture with no external frontend framework dependencies.
 
 ---
 
-## Proje Yapısı
+## Project Structure
 
 ```
 zoom-vsdk-poc/
-├── index.html          # Sayfa iskeleti (Lobby ve Room ekranları, kontroller)
-├── style.css           # Tasarım sistemi, dark mode teması, video grid ve animasyonlar
-├── token-server.js     # Güvenli JWT token üreten Express backend servisi
-├── .env                # Zoom SDK kimlik bilgileri (SDK_KEY, SDK_SECRET)
-├── package.json        # Backend bağımlılıkları (express, jsonwebtoken, cors, dotenv)
-├── README.md           # Proje dokümantasyonu
-└── js/                 # Modüler ES modülleri (Vanilla JS)
-    ├── main.js         # Uygulama giriş noktası (Bootstrap)
-    ├── dom.js          # Tüm DOM element referansları
-    ├── state.js        # Uygulama durumu (AppState singleton)
-    ├── sdk.js          # Zoom Video SDK adaptör katmanı
-    ├── session.js      # Oturum oluşturma, katılma, odaya giriş ve çıkış yaşam döngüsü
-    ├── events.js       # Zoom SDK event dinleyicileri (user-added, peer-video, vb.)
-    ├── controls.js     # Mikrofon/kamera toggle ve buton durum senkronizasyonu
-    ├── tiles.js        # Katılımcı video tile DOM factory
-    ├── grid.js         # Dinamik CSS grid sütun yöneticisi
-    ├── participants.js # Katılımcı paneli ve sayaç yönetimi
-    ├── timer.js        # Oturum süresi sayacı (HH:MM:SS)
-    ├── ui.js           # Ekran geçişleri, toast bildirimleri ve loading overlay
-    ├── helpers.js      # Yardımcı fonksiyonlar (getInitials)
-    └── listeners.js    # DOM event listener bağlantıları ve klavye kısayolları
+├── index.html          # Page skeleton (Lobby and Room screens, controls)
+├── style.css           # Design system, dark mode theme, video grid, and animations
+├── token-server.js     # Express backend service generating secure JWT tokens
+├── .env                # Zoom SDK credentials (SDK_KEY, SDK_SECRET)
+├── package.json        # Backend dependencies (express, jsonwebtoken, cors, dotenv)
+├── README.md           # Project documentation
+└── js/                 # Modular ES modules (Vanilla JS)
+    ├── main.js         # Application entry point (Bootstrap)
+    ├── dom.js          # Centralized DOM element references
+    ├── state.js        # Application state (AppState singleton)
+    ├── sdk.js          # Zoom Video SDK adapter layer
+    ├── session.js      # Session lifecycle (create, join, enterRoom, cleanupRoom)
+    ├── events.js       # Zoom SDK event listeners (user-added, peer-video, etc.)
+    ├── controls.js     # Microphone/camera toggles and button state synchronization
+    ├── tiles.js        # Participant video tile DOM factory
+    ├── grid.js         # Dynamic CSS grid column manager
+    ├── participants.js # Participant panel and counter management
+    ├── timer.js        # Session duration timer (HH:MM:SS)
+    ├── ui.js           # Screen transitions, toast notifications, and loading overlay
+    ├── helpers.js      # Helper functions (getInitials)
+    └── listeners.js    # DOM event listener bindings and keyboard shortcuts
 ```
 
 ---
 
-## Mimari ve Modül İlişkileri
+## Architecture and Module Relationships
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -42,7 +42,7 @@ zoom-vsdk-poc/
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │       js/main.js  ───►  js/listeners.js                     │
-│       (Bootstrap)        (DOM Event Dinleyicileri)          │
+│       (Bootstrap)        (DOM Event Listeners)              │
 └──────────────────────────────┬──────────────────────────────┘
                                │
         ┌──────────────────────┼──────────────────────┐
@@ -58,7 +58,7 @@ zoom-vsdk-poc/
         ▼                      ▼                      ▼
 ┌───────────────┐      ┌───────────────┐      ┌───────────────┐
 │   js/sdk.js   │      │  js/state.js  │      │   js/dom.js   │
-│ (SDK Adaptör) │◄────►│  (AppState)   │◄────►│ (Elementler)  │
+│ (SDK Adapter) │◄────►│  (AppState)   │◄────►│  (Elements)   │
 └───────┬───────┘      └───────┬───────┘      └───────────────┘
         │                      │
         ▼                      ▼
@@ -70,31 +70,31 @@ zoom-vsdk-poc/
 
 ---
 
-## Modül Sorumlulukları
+## Module Responsibilities
 
-| Modül | Görevi |
+| Module | Responsibility |
 |---|---|
-| `js/state.js` | `AppState` nesnesi; oturum durumu, katılımcılar, `sdkClient` ve `sdkStream` referanslarını tutar. |
-| `js/dom.js` | Tüm DOM düğümlerini tek bir nesnede toplar; modüller arası tutarlı erişim sağlar. |
-| `js/sdk.js` | Zoom Video SDK API'siyle doğrudan konuşan tek katmandır (`initSDK`, `startLocalMedia`, `attachVideo`, `detachVideo`, `leaveSession`). |
-| `js/session.js` | Oturum başlatma, oturuma katılma, odaya giriş (`enterRoom`), çıkış ve kaynak temizliği (`cleanupRoom`). |
-| `js/events.js` | Zoom Video SDK olaylarını dinler (`user-added`, `user-removed`, `peer-video-state-change`, `user-updated`, `connection-change`). |
-| `js/controls.js` | Mikrofon (Mute/Unmute) ve kamera (Start/Stop) açma-kapama işlevleri ve UI durumunu günceller. |
-| `js/tiles.js` | Her katılımcı için özel video tile (`.video-tile`) ve Zoom SDK'nın `<video-player>` elementini barındıracak video container DOM'unu üretir. |
-| `js/grid.js` | Katılımcı sayısına göre dinamik grid sütun sayısını (1-5) CSS `--cols` değişkeniyle hesaplar. |
-| `js/participants.js` | Katılımcı yan panelini ve başlık sayaç bilgisini günceller. |
-| `js/timer.js` | Oturum süresini HH:MM:SS formatında canlı günceller. |
-| `js/ui.js` | Ekranlar arası geçiş (`lobby` / `room`), dinamik toast bildirimleri ve loading göstergesi. |
-| `js/helpers.js` | Katılımcı isimlerinden avatar harfleri üreten yardımcı fonksiyonlar (`getInitials`). |
-| `js/listeners.js` | Buton tıklamaları, Enter tuşuyla form gönderme ve klavye kısayollarını (`Alt+M`, `Alt+V`) bağlar. |
-| `js/main.js` | DOM hazır olduğunda dinleyicileri bağlayıp uygulamayı başlatan giriş noktası. |
+| `js/state.js` | `AppState` singleton; holds session state, participants, `sdkClient`, and `sdkStream` references. |
+| `js/dom.js` | Aggregates all DOM nodes into a single object; provides consistent access across modules. |
+| `js/sdk.js` | The only layer directly interfacing with the Zoom Video SDK API (`initSDK`, `startLocalMedia`, `attachVideo`, `detachVideo`, `leaveSession`). |
+| `js/session.js` | Session initialization, joining, entering the room (`enterRoom`), leaving, and resource cleanup (`cleanupRoom`). |
+| `js/events.js` | Listens for Zoom Video SDK events (`user-added`, `user-removed`, `peer-video-state-change`, `user-updated`, `connection-change`). |
+| `js/controls.js` | Microphone (Mute/Unmute) and camera (Start/Stop) toggle logic and UI state synchronization. |
+| `js/tiles.js` | Produces custom video tile DOM elements (`.video-tile`) and container wrappers for Zoom SDK's `<video-player>` element. |
+| `js/grid.js` | Dynamically calculates the CSS grid column count (1–5) based on participant count using the `--cols` CSS variable. |
+| `js/participants.js` | Manages the participant sidebar panel and updates the header counter badge. |
+| `js/timer.js` | Updates the live session elapsed timer in `HH:MM:SS` format. |
+| `js/ui.js` | Screen transitions (`lobby` / `room`), dynamic toast notifications, and loading overlay. |
+| `js/helpers.js` | Utility functions such as generating avatar initials from participant names (`getInitials`). |
+| `js/listeners.js` | Binds button click handlers, Enter key form submission, and keyboard shortcuts (`Alt+M`, `Alt+V`). |
+| `js/main.js` | Application entry point that bootstraps listeners once the DOM is ready. |
 
 ---
 
-## Gereksinimler ve Kurulum
+## Requirements and Setup
 
-### 1. Ortam Değişkenleri (.env)
-Kök dizindeki `.env` dosyasında Zoom Video SDK geliştirici panelinden aldığınız anahtarlar tanımlı olmalıdır:
+### 1. Environment Variables (.env)
+Define your Zoom Video SDK credentials obtained from the Zoom Developer Portal in a `.env` file in the root directory:
 
 ```env
 SDK_KEY=your_zoom_video_sdk_key_here
@@ -102,93 +102,93 @@ SDK_SECRET=your_zoom_video_sdk_secret_here
 PORT=3001
 ```
 
-> **Güvenlik Notu:** `SDK_SECRET` asla frontend koduna dahil edilmemelidir. Token üretimi daima `token-server.js` üzerinden backend'de yapılır.
+> **Security Note:** Never expose `SDK_SECRET` in client-side code. Token generation must always be handled securely on the backend via `token-server.js`.
 
-### 2. Bağımlılıkları Yükleme
+### 2. Install Dependencies
 ```bash
 npm install
 ```
 
 ---
 
-## Çalıştırma
+## Running the Application
 
-Uygulamanın çalışması için **iki ayrı servis** gereklidir:
-1. **Token Sunucusu (Node.js/Express):** Zoom Video SDK için JWT token sağlar.
-2. **Web Sunucusu (Statik HTTP):** ES modüllerini ve web arayüzünü sunar.
+The application requires **two separate services** to run:
+1. **Token Server (Node.js/Express):** Generates JWT tokens for the Zoom Video SDK.
+2. **Web Server (Static HTTP):** Serves the ES modules and frontend web interface.
 
-### 1. Adım: Token Sunucusunu Başlatın
+### Step 1: Start the Token Server
 ```bash
 node token-server.js
-# Çıktı: Token sunucusu: http://localhost:3001
+# Output: Token server running at: http://localhost:3001
 ```
 
-### 2. Adım: Web Sunucusunu Başlatın
-Tarayıcınızın ES modüllerini CORS kısıtlaması olmadan yükleyebilmesi ve kamera/mikrofon izinleri için yerel bir HTTP sunucusu kullanın:
+### Step 2: Start the Web Server
+Use a local HTTP server to allow the browser to load ES modules without CORS issues and to support camera/microphone permissions:
 
 ```bash
-# Node.js npx ile:
+# Using Node.js npx:
 npx serve .
 ```
 
-Tarayıcınızda açın:
-`http://localhost:8080` (veya `http://localhost:3000`)
+Open in your browser:
+`http://localhost:8080` (or `http://localhost:3000`)
 
 ---
 
-## Zoom Video SDK Entegrasyon Detayları (v2.x)
+## Zoom Video SDK Integration Details (v2.x)
 
-Zoom Video SDK Web 2.x sürümü, eski `<video>` elementine stream atama yönteminden farklı olarak modern Canvas/WebGL tabanlı özel `<video-player>` elementlerini kullanır.
+Zoom Video SDK Web 2.x uses custom Canvas/WebGL-based `<video-player>` elements rather than attaching streams to traditional `<video>` tags.
 
-### Video Akışı Render Akışı:
-1. **İstemci Başlatma:**
+### Video Stream Rendering Flow:
+1. **Initialize Client:**
    ```javascript
    const client = ZoomVideo.createClient();
    await client.init('en-US', 'Global', { patchJsMedia: true });
    ```
-2. **Oturuma Katılma:**
+2. **Join Session:**
    ```javascript
    await client.join(sessionName, token, userName);
    ```
-3. **Kamera Başlatma ve Render:**
+3. **Start Camera and Render Video:**
    ```javascript
    const stream = client.getMediaStream();
    await stream.startVideo();
-   // SDK bir <video-player> custom elementi üretir:
+   // The SDK generates a custom <video-player> element:
    const userVideo = await stream.attachVideo(userId, 3); // 3 = 720p / HD
    containerElement.appendChild(userVideo);
    ```
-4. **Kamera Durdurma:**
+4. **Stop Camera:**
    ```javascript
    await stream.stopVideo();
    await stream.detachVideo(userId);
    ```
-5. **Oturumdan Ayrılma ve Temizlik:**
+5. **Leave Session and Cleanup:**
    ```javascript
    await client.leave(endForAll);
-   ZoomVideo.destroyClient(); // Kaynakları ve bellek sızıntılarını temizler
+   ZoomVideo.destroyClient(); // Cleans up resources and memory leaks
    ```
 
 ---
 
-## Klavye Kısayolları
+## Keyboard Shortcuts
 
-| Kısayol | Fonksiyon |
+| Shortcut | Function |
 |---|---|
-| `Alt + M` | Mikrofonu sessize al / aç (Mute/Unmute) |
-| `Alt + V` | Kamerayı aç / kapat (Start/Stop Video) |
-| `Enter` | Form alanlarındayken (Session Name, Name vb.) formu gönderir |
+| `Alt + M` | Toggle microphone (Mute/Unmute) |
+| `Alt + V` | Toggle camera (Start/Stop Video) |
+| `Enter` | Submit form when inside input fields (Session Name, Name, etc.) |
 
 ---
 
-## Video Grid Yerleşim Mantığı
+## Video Grid Layout Logic
 
-Katılımcı sayısına göre CSS Grid sütun sayısı (`--cols`) otomatik güncellenir:
+The CSS Grid column count (`--cols`) updates dynamically based on the number of participants:
 
-| Katılımcı Sayısı | Grid Sütun Sayısı |
+| Participant Count | Grid Columns |
 |---|---|
-| 1 | 1 sütun |
-| 2 – 4 | 2 sütun |
-| 5 – 9 | 3 sütun |
-| 10 – 16 | 4 sütun |
-| 17+ | 5 sütun |
+| 1 | 1 column |
+| 2 – 4 | 2 columns |
+| 5 – 9 | 3 columns |
+| 10 – 16 | 4 columns |
+| 17+ | 5 columns |
