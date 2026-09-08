@@ -119,7 +119,7 @@
       clearError();
 
       var clientId = document.getElementById('clientId').value.trim();
-      var meetingNumber = document.getElementById('meetingNumber').value.trim();
+      var meetingNumber = document.getElementById('meetingNumber').value.replace(/[\s\-]/g, '');
       var passcode = document.getElementById('passcode').value.trim();
       var displayName = document.getElementById('displayName').value.trim();
 
