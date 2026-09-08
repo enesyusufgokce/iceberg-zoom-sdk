@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZoomSDK POC – Video Conference</title>
+  <meta name="description" content="A Proof of Concept single-page application demonstrating Zoom Video SDK integration with session creation, joining, and real-time video/audio communication." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- =====================================================================
+       SCREEN 1: LOBBY / JOIN SCREEN
+       Shown by default. Hidden once the user enters a session.
+  ====================================================================== -->
+  <div id="lobby-screen" class="screen active">
+
+    <!-- Animated background orbs for visual depth -->
+    <div class="bg-orb bg-orb--1" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb--2" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb--3" aria-hidden="true"></div>
+
+    <div class="lobby-card">
+
+      <!-- Brand / Logo -->
+      <header class="lobby-header">
+        <div class="logo" aria-label="ZoomSDK POC logo">
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+          </div>
+          <span class="logo-text">ZoomSDK <strong>POC</strong></span>
+        </div>
+        <p class="lobby-subtitle">Video SDK Integration — Proof of Concept</p>
+      </header>
+
+      <!-- SDK Status Indicator -->
+      <div id="sdk-status-banner" class="status-banner status-banner--idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="sdk-status-text">SDK Not Initialized</span>
+      </div>
+
+      <!-- Tab switcher: Create vs Join -->
+      <div class="tab-switcher" role="tablist" aria-label="Session options">
+        <button
+          id="tab-create"
+          class="tab-btn active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-create"
+          data-tab="create">
+          Create Session
+        </button>
+        <button
+          id="tab-join"
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-join"
+          data-tab="join">
+          Join Session
+        </button>
+      </div>
+
+      <!-- ── Panel: Create Session ─────────────────────────────────── -->
+      <div id="panel-create" class="tab-panel active" role="tabpanel" aria-labelledby="tab-create">
+        <div class="form-group">
+          <label for="create-session-name">Session Name</label>
+          <input
+            type="text"
+            id="create-session-name"
+            placeholder="e.g. team-standup-2026"
+            autocomplete="off"
+            spellcheck="false" />
+        </div>
+        <div class="form-group">
+          <label for="create-user-name">Your Display Name</label>
+          <input
+            type="text"
+            id="create-user-name"
+            placeholder="e.g. Alice Johnson"
+            autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label for="create-sdk-key">SDK Key <span class="label-hint">(optional)</span></label>
+            <input
+              type="text"
+              id="create-sdk-key"
+              placeholder="Your SDK Key"
+              autocomplete="off"
+              spellcheck="false" />
+          </div>
+          <div class="form-group form-group--half">
+            <label for="create-sdk-secret">SDK Secret <span class="label-hint">(optional)</span></label>
+            <input
+              type="password"
+              id="create-sdk-secret"
+              placeholder="Your SDK Secret" />
+          </div>
+        </div>
+        <button id="btn-create-session" class="btn btn--primary btn--full" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Create &amp; Start Session
+        </button>
+      </div>
+
+      <!-- ── Panel: Join Session ───────────────────────────────────── -->
+      <div id="panel-join" class="tab-panel" role="tabpanel" aria-labelledby="tab-join">
+        <div class="form-group">
+          <label for="join-session-id">Session ID / Room Code</label>
+          <input
+            type="text"
+            id="join-session-id"
+            placeholder="Paste the session ID here"
+            autocomplete="off"
+            spellcheck="false" />
+        </div>
+        <div class="form-group">
+          <label for="join-user-name">Your Display Name</label>
+          <input
+            type="text"
+            id="join-user-name"
+            placeholder="e.g. Bob Smith"
+            autocomplete="off" />
+        </div>
+        <button id="btn-join-session" class="btn btn--primary btn--full" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          Join Session
+        </button>
+      </div>
+
+      <!-- Init SDK button (separate from create/join) -->
+      <div class="sdk-init-row">
+        <button id="btn-init-sdk" class="btn btn--ghost btn--sm" type="button">
+          Initialize SDK
+        </button>
+        <span class="sdk-init-hint">Run this first to load the Video SDK</span>
+      </div>
+
+    </div><!-- /.lobby-card -->
+  </div><!-- /#lobby-screen -->
+
+
+  <!-- =====================================================================
+       SCREEN 2: VIDEO ROOM SCREEN
+       Hidden by default. Shown when the user enters a session.
+  ====================================================================== -->
+  <div id="room-screen" class="screen" aria-hidden="true">
+
+    <!-- Top bar: session info + leave button -->
+    <header class="room-topbar">
+      <div class="room-info">
+        <div class="room-info-dot" aria-label="Live session indicator" title="Session is live"></div>
+        <div class="room-info-text">
+          <span id="room-session-name" class="room-session-name">—</span>
+          <span id="room-participant-count" class="room-participant-count">0 participants</span>
+        </div>
+      </div>
+      <div class="room-topbar-center">
+        <span id="room-timer" class="room-timer" aria-live="polite" aria-label="Session duration">00:00:00</span>
+      </div>
+      <button id="btn-leave" class="btn btn--danger btn--sm" type="button" aria-label="Leave session">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Leave
+      </button>
+    </header>
+
+    <!-- Main video grid area -->
+    <main class="room-main">
+      <div id="video-grid" class="video-grid" role="list" aria-label="Participant videos">
+        <!-- Video tiles are injected here dynamically by app.js -->
+      </div>
+    </main>
+
+    <!-- Bottom control bar -->
+    <footer class="control-bar" role="toolbar" aria-label="Meeting controls">
+
+      <div class="controls-group controls-group--left">
+        <!-- Placeholder for future controls (e.g. participants list) -->
+        <button id="btn-participants" class="ctrl-btn ctrl-btn--icon-only" type="button" aria-label="Toggle participants panel">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span class="ctrl-btn-label">Participants</span>
+        </button>
+      </div>
+
+      <div class="controls-group controls-group--center">
+        <!-- Mute / Unmute Microphone -->
+        <button
+          id="btn-toggle-mic"
+          class="ctrl-btn ctrl-btn--mic"
+          type="button"
+          aria-label="Mute microphone"
+          aria-pressed="false"
+          data-state="on">
+          <span class="ctrl-icon ctrl-icon--on" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          </span>
+          <span class="ctrl-icon ctrl-icon--off" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          </span>
+          <span class="ctrl-btn-label">Mute</span>
+        </button>
+
+        <!-- Video on / off -->
+        <button
+          id="btn-toggle-video"
+          class="ctrl-btn ctrl-btn--video"
+          type="button"
+          aria-label="Turn off camera"
+          aria-pressed="false"
+          data-state="on">
+          <span class="ctrl-icon ctrl-icon--on" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+          </span>
+          <span class="ctrl-icon ctrl-icon--off" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+          </span>
+          <span class="ctrl-btn-label">Stop Video</span>
+        </button>
+
+        <!-- Screen Share (placeholder) -->
+        <button id="btn-share-screen" class="ctrl-btn" type="button" aria-label="Share screen" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span class="ctrl-btn-label">Share</span>
+        </button>
+
+        <!-- Chat (placeholder) -->
+        <button id="btn-chat" class="ctrl-btn" type="button" aria-label="Open chat" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span class="ctrl-btn-label">Chat</span>
+        </button>
+      </div>
+
+      <div class="controls-group controls-group--right">
+        <!-- End/Leave button duplicated in control bar for discoverability -->
+        <button id="btn-end-session" class="ctrl-btn ctrl-btn--end" type="button" aria-label="End session for everyone">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C9.44 16.29 7.71 14.56 6.31 12.56A19.736 19.736 0 0 1 3.24 3.93 2 2 0 0 1 5.21 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.19 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+          <span class="ctrl-btn-label">End</span>
+        </button>
+      </div>
+
+    </footer>
+
+    <!-- Participants panel (slide-in) -->
+    <aside id="participants-panel" class="participants-panel" aria-label="Participants panel" aria-hidden="true">
+      <div class="participants-panel-header">
+        <h2>Participants</h2>
+        <button id="btn-close-participants" class="icon-btn" type="button" aria-label="Close participants panel">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <ul id="participants-list" class="participants-list" role="list" aria-label="List of participants">
+        <!-- Populated dynamically -->
+      </ul>
+    </aside>
+
+  </div><!-- /#room-screen -->
+
+
+  <!-- =====================================================================
+       TOAST NOTIFICATION CONTAINER
+       Positioned fixed, top-right corner.
+  ====================================================================== -->
+  <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
+
+  <!-- =====================================================================
+       LOADING OVERLAY
+       Shows a spinner during async SDK operations.
+  ====================================================================== -->
+  <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+    <div class="spinner" role="progressbar" aria-label="Loading"></div>
+    <p id="loading-message" class="loading-message">Initializing…</p>
+  </div>
+
+  <!-- Zoom Video SDK (Yerel node_modules ve CDN Fallback) -->
+  <script src="node_modules/@zoom/videosdk/dist/index.umd.js"></script>
+  <script>
+    if (!window.WebVideoSDK && !window.ZoomVideo) {
+      document.write('<script src="https://source.zoom.us/videosdk/zoom-video-2.5.0.min.js"><\/script>');
+    }
+  </script>
+  <!-- Modüler Uygulama Giriş Noktası (ES Modules) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
