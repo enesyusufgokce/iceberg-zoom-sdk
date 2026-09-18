@@ -13,9 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Exempt Zoom webhook endpoint from CSRF
+        // Exempt Zoom webhook and token endpoints from CSRF
         $middleware->validateCsrfTokens(except: [
-            'api/zoom/webhook',
+            'api/*',
+            'jwt',
+            'token',
+            'zoom/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

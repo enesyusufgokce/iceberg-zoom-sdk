@@ -8,12 +8,16 @@ use Illuminate\Support\Facades\Route;
 // Meeting SDK JWT signature endpoint for frontend join/host requests
 Route::post('/zoom/meeting-auth', [MeetingAuthController::class, 'issue'])
     ->name('zoom.meeting-auth');
+Route::post('/jwt', [MeetingAuthController::class, 'issue'])
+    ->name('zoom.jwt');
 
 // Video SDK JWT token endpoint for video session join/host requests
 Route::post('/zoom/token', [VideoSessionController::class, 'issue'])
     ->name('zoom.video.token');
 Route::post('/zoom/video-token', [VideoSessionController::class, 'issue'])
     ->name('zoom.video-token');
+Route::post('/token', [VideoSessionController::class, 'issue'])
+    ->name('zoom.token');
 
 // Zoom Webhook endpoint (CSRF exempt in bootstrap/app.php)
 Route::post('/zoom/webhook', [WebhookController::class, 'handle'])
