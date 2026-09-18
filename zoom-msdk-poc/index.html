@@ -79,7 +79,7 @@
   <div id="zmmtg-root"></div>
 
   <script>
-    var JWT_ENDPOINT = 'http://localhost:4000/jwt';
+    var JWT_ENDPOINT = 'http://localhost:8000/api/zoom/meeting-auth';
     var LEAVE_URL = 'http://localhost:3000';
 
     var errorBox = document.getElementById('error-box');
@@ -104,14 +104,15 @@
       });
 
       if (!res.ok) {
-        throw new Error('Backend /jwt returned HTTP ' + res.status);
+        var errorData = await res.json().catch(function () { return {}; });
+        throw new Error(errorData.error || ('Backend /meeting-auth returned HTTP ' + res.status));
       }
 
       var data = await res.json();
       if (!data.signature) {
         throw new Error('Backend response did not contain a signature');
       }
-      return data.signature;
+      return data;
     }
 
     document.getElementById('join-form').addEventListener('submit', async function (e) {
@@ -123,8 +124,8 @@
       var passcode = document.getElementById('passcode').value.trim();
       var displayName = document.getElementById('displayName').value.trim();
 
-      if (!clientId || !meetingNumber || !displayName) {
-        showError('Client ID, Meeting Number ve Display Name zorunlu.');
+      if (!meetingNumber || !displayName) {
+        showError('Meeting Number ve Display Name zorunlu.');
         return;
       }
 
@@ -132,7 +133,20 @@
       joinBtn.disabled = true;
 
       try {
-        var signature = await getSignature(meetingNumber, 0);
+        var authData = await getSignature(meetingNumber, 0);
+        var signature = authData.signature;
+        var sdkKey = clientId || authData.sdkKey;
+
+        if (!sdkKey) {
+          showError('Client ID (SDK Key) ne backendde ne de formda tanımlı.');
+          joinBtn.disabled = false;
+          return;
+        }
+
+        // Form alanını da doldur
+        if (!clientId && authData.sdkKey) {
+          document.getElementById('clientId').value = authData.sdkKey;
+        }
 
         ZoomMtg.setZoomJSLib('https://source.zoom.us/6.2.0/lib', '/av');
         ZoomMtg.preLoadWasm();
@@ -146,7 +160,7 @@
           patchJsMedia: true,
           success: function () {
             ZoomMtg.join({
-              sdkKey: clientId,
+              sdkKey: sdkKey,
               signature: signature,
               meetingNumber: meetingNumber,
               passWord: passcode,

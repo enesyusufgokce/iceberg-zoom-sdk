@@ -14,7 +14,7 @@ async function initSDK(config = {}) {
 
 async function generateSessionToken(sessionName) {
   console.info('[SDK] generateSessionToken:', sessionName);
-  const res = await fetch('http://localhost:3001/api/zoom/token', {
+  const res = await fetch('http://localhost:8000/api/zoom/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionName, role: 1 }),
