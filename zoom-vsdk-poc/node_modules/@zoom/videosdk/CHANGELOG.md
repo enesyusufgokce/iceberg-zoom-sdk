@@ -1,0 +1,1 @@
+The Changelog can be found [here](https://developers.zoom.us/changelog/video-sdk/web/)

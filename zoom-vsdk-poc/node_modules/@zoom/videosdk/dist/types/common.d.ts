@@ -1,0 +1,1116 @@
+/**
+ * Definition of error types for operations.
+ * - INVALID_OPERATION: The operation is invalid, perhaps caused by duplicated operations.
+ * - INTERNAL_ERROR: The remote service is temporarily unavailable.
+ * - INSUFFICIENT_PRIVILEGES: The operation is only applicable for a host or manager.
+ * - OPERATION_TIMEOUT: The operation timed out, try again later.
+ * - IMPROPER_MEETING_STATE: The user is not in a meeting, see the reason for details.
+ *  - `closed`: The meeting is not joined.
+ *  - `on hold`: The user is on hold.
+ *  - `reconnecting`: The meeting is reconnecting.
+ * - INVALID_PARAMETERS: The parameters passed to the method are invalid, perhaps the wrong user ID or value, see the reason for details.
+ * - OPERATION_LOCKED: The operation can not be completed because the relevant property is locked, see the reason for details.
+ */
+export type ErrorTypes =
+  | 'INVALID_OPERATION'
+  | 'INTERNAL_ERROR'
+  | 'OPERATION_TIMEOUT'
+  | 'INSUFFICIENT_PRIVILEGES'
+  | 'IMPROPER_MEETING_STATE'
+  | 'INVALID_PARAMETERS'
+  | 'OPERATION_LOCKED';
+/**
+ * Failure reason for async operation.
+ */
+interface ExecutedFailure {
+  /**
+   * Error type.
+   */
+  type: ErrorTypes;
+  /**
+   * Error reason.
+   */
+  reason: string;
+  /**
+   * Error code.
+   */
+  errorCode: number;
+}
+/**
+ * The result of an asynchronous operation. It is a promise object.
+ * - '': Success
+ * - ExecutedFailure: Failure. Use `.catch(error=>{})` or `try{ *your code* }catch(error){}` to handle the errors.
+ */
+export type ExecutedResult = Promise<'' | ExecutedFailure>;
+
+/**
+ * The participant interface.
+ */
+interface Participant {
+  /**
+   * User ID.
+   */
+  userId: number;
+  /**
+   * User's display name.
+   */
+  displayName: string;
+  /**
+   * User's audio state.
+   * - `''`: No audio.
+   * - `computer`: Joined by computer audio.
+   * - `phone`: Joined by phone.
+   */
+  audio: '' | 'computer' | 'phone';
+  /**
+   * Whether audio is muted.
+   * If the user is not joined to audio (not connected to the microphone), the value is undefined
+   */
+  muted?: boolean;
+  /**
+   * Whether the user is the host.
+   */
+  isHost: boolean;
+  /**
+   * Whether the user is a manager.
+   */
+  isManager: boolean;
+  /**
+   * User's avatar.
+   * Users can set their avatar in their [web profile](https://zoom.us/profile).
+   */
+  avatar?: string;
+  /**
+   * Whether the user started video.
+   */
+  bVideoOn: boolean;
+  /**
+   * Whether the user started sharing.
+   */
+  sharerOn: boolean;
+  /**
+   * Whether the share is paused.
+   */
+  sharerPause: boolean;
+  /**
+   * Whether the share is optimized for video.
+   */
+  bVideoShare?: boolean;
+  /**
+   * Whether the sharer is also sharing the tab audio.
+   */
+  bShareAudioOn?: boolean;
+  /**
+   *  Whether the sharer is also sharing to the subsession.
+   */
+  bShareToSubsession?: boolean;
+  /**
+   *  Whether the user connected via the phone.
+   */
+  isPhoneUser?: boolean;
+  /**
+   * The unified ID of a user among the main session or subsession.
+   */
+  userGuid?: string;
+  /**
+   * Whether to allow individual recording.
+   */
+  isAllowIndividualRecording: boolean;
+  /*
+   * Whether the user has a camera connected to the device.
+   */
+  isVideoConnect: boolean;
+  /**
+   * The `user_identity` from the JWT payload.
+   * @deprecated use `userKey` instead
+   */
+  userIdentity?: string;
+  /**
+   * The `user_key` from the JWT payload.
+   */
+  userKey?: string;
+  /**
+   * Whether the user is only connected to the audio speaker, not the microphone.
+   */
+  isSpeakerOnly?: boolean;
+  /**
+   * The phone number if the user is a public switched telephone network (PSTN) call out user.
+   * For privacy concerns, only the calling user has this property.
+   */
+  phoneNumber?: string;
+  /**
+   * Whether the user is in a failover process.
+   */
+  isInFailover?: boolean;
+  /**
+   * Subsession ID.
+   * Available if the user is in a subsession.
+   */
+  subsessionId?: string;
+  /**
+   * Whether the voice translator is on.
+   * @ignore
+   */
+  isVoiceTranslatorOn?: boolean;
+  /**
+   * The selected voice timbre of the user if the voice translator is on.
+   * @ignore
+   */
+  voiceTimbre?: number;
+  /**
+   * The selected listening language of the user if the voice translator is on.
+   * @ignore
+   */
+  voiceListeningLanguage?: string;
+  /**
+   * The selected speaking language of the user if the voice translator is on.
+   * @ignore
+   */
+  voiceSpeakingLanguage?: string;
+  /**
+   * How the phone user joined the session. Only present when the user is a phone user.
+   * - 'dial in': User dialed into the session.
+   * - 'dial out': User was invited by the session user.
+   */
+  dialType?: string;
+  /**
+   * Whether this user is an RTMP user
+   */
+  isRtmpUser?: boolean;
+}
+/**
+ * Subsession's status.
+ */
+export enum SubsessionStatus {
+  /**
+   * Subsession is not open.
+   */
+  NotStarted = 1,
+  /**
+   * Subsession is open.
+   */
+  InProgress = 2,
+  /**
+   * Subsession is closing, there may be a closing countdown.
+   */
+  Closing = 3,
+  /**
+   * Subsession is closed.
+   */
+  Closed = 4,
+}
+
+/**
+ * Dial out state.
+ *
+ * Normal process: Calling-> Ringing->Accepted->Success
+ *
+ * Busy process: Calling->Busy
+ */
+export enum DialoutState {
+  /**
+   * Calling.
+   */
+  Calling = 1,
+  /**
+   * Ringing.
+   */
+  Ringing = 2,
+  /**
+   * User accepted the call.
+   */
+  Accepted = 3,
+  /**
+   * Busy.
+   */
+  Busy = 4,
+  /**
+   * Service unavailable.
+   */
+  NotAvailable = 5,
+  /**
+   * User hung up the call.
+   */
+  HangUp = 6,
+  /**
+   * Call failed.
+   */
+  Fail = 7,
+  /**
+   * Call succeeded.
+   */
+  Success = 8,
+  /**
+   * Timeout.
+   */
+  Timeout = 9,
+  /**
+   * Canceling the call.
+   */
+  Canceling = 10,
+  /**
+   * Canceled the call.
+   */
+  Canceled = 11,
+  /**
+   * Failed to cancel the call.
+   */
+  CancelFailed = 12,
+  /**
+   * Phone rang but no one answered, a missed call
+   */
+  NoAnswer = 13,
+  /**
+   * Answered by machine
+   */
+  AnsweredByMachine = 17,
+}
+
+/**
+ * Payload audio muted source type for current-audio-change event.
+ */
+export enum MutedSource {
+  /**
+   * User actively muted.
+   */
+  Active = 'active',
+  /**
+   * The host muted the user.
+   */
+  PassiveByMuteOne = 'passive(mute one)',
+  /**
+   * The host muted all users.
+   */
+  PassiveByMuteAll = 'passive(mute all)',
+}
+
+/**
+ * The reason for leaving audio for the current-audio-change event.
+ * @enum
+ */
+export enum LeaveAudioSource {
+  /**
+   * User actively left audio.
+   */
+  Active = 'active',
+  /**
+   * Left audio due to failover.
+   */
+  Failover = 'failover',
+  /**
+   * Left audio due to system ending audio stream.
+   */
+  EndedBySystem = 'audio stream is ended by system',
+  /**
+   * Left audio as audio was connected to a phone call.
+   */
+  Pstn = 'pstn',
+  /**
+   * Left audio due to microphone error.
+   */
+  MicrophoneError = 'microphone error',
+}
+
+/**
+ * Payload for action type of current audio change.
+ */
+export enum AudioChangeAction {
+  /**
+   * Join the audio.
+   */
+  Join = 'join',
+  /**
+   * Leave the audio.
+   */
+  Leave = 'leave',
+  /**
+   * Muted.
+   */
+  Muted = 'muted',
+  /**
+   * Unmuted.
+   */
+  Unmuted = 'unmuted',
+}
+
+/**
+ * The reconnecting reason for the connection-change payload.
+ */
+export enum ReconnectReason {
+  /**
+   * Meeting failover.
+   */
+  Failover = 'failover',
+  /**
+   * Join the breakout subsession.
+   */
+  JoinSubsession = 'join breakout room',
+  /**
+   * Move among the breakout subsessions.
+   */
+  MoveToSubsession = 'move to breakout room',
+  /**
+   * Back to the main session.
+   */
+  BackToMainSession = 'back to main session',
+}
+/**
+ * Enumeration of video quality.
+ * @enum
+ */
+export enum VideoQuality {
+  /**
+   * 90P
+   */
+  Video_90P = 0,
+  /**
+   * 180P
+   */
+  Video_180P = 1,
+  /**
+   * 360P
+   */
+  Video_360P = 2,
+  /**
+   * 720P
+   */
+  Video_720P = 3,
+  /**
+   * 1080P
+   */
+  Video_1080P = 4,
+}
+/**
+ * Enumeration of share view quality
+ * @enum
+ */
+export enum ShareViewQuality {
+  /**
+   * Original resolution
+   */
+  Original = 0,
+  /**
+   * Low resolution
+   */
+  Low = 1,
+  /**
+   * Medium resolution
+   */
+  Medium = 2,
+  /**
+   * High resolution
+   */
+  High = 3,
+}
+/**
+ *  `facingMode` for mobile browser, see https://developer.mozilla.org/en-US/docs/Web/API/MediaTrackConstraints/facingMode.
+ */
+export enum MobileVideoFacingMode {
+  /**
+   * The video source is facing toward the user, such as a front-facing camera on a mobile device.
+   */
+  User = 'user',
+  /**
+   * The video source is facing away from the user, such as the back camera on a mobile device facing the user's environment.
+   */
+  Environment = 'environment',
+  /**
+   * The video source is facing toward the user but to their left, such as a camera aimed toward the user but over their left shoulder.
+   */
+  Left = 'left',
+  /**
+   * The video source is facing toward the user but to their right, such as a camera aimed toward the user but over their right shoulder.
+   */
+  Right = 'right',
+}
+
+/**
+ * Enumeration of camera control command.
+ * @enum
+ */
+export enum CameraControlCmd {
+  /**
+   * Zoom in.
+   */
+  ZoomIn = 2,
+  /**
+   * Zoom out.
+   */
+  ZoomOut = 3,
+  /**
+   * Pan left.
+   */
+  Left = 4,
+  /**
+   * Pan right.
+   */
+  Right = 5,
+  /**
+   * Tilt up.
+   */
+  Up = 6,
+  /**
+   * Tilt down.
+   */
+  Down = 7,
+  /**
+   * Switch camera.
+   */
+  SwitchCamera = 8,
+}
+
+/**
+ * Capability of camera.
+ */
+export interface PTZCameraCapability {
+  /**
+   * Pan
+   */
+  pan: boolean;
+  /**
+   * Tilt
+   */
+  tilt: boolean;
+  /**
+   * Zoom
+   */
+  zoom: boolean;
+}
+
+/**
+ * Reasons for refusal to control far-end camera.
+ */
+export enum FarEndCameraControlDeclinedReason {
+  /**
+   * Normal.
+   */
+  None = 0,
+  /**
+   * Approved another user.
+   */
+  ApproveAnother = 3,
+  /**
+   * User withdrew the control.
+   */
+  Stop = 5,
+}
+/**
+ * Log level
+ */
+type LogLevelLabel = 'debug' | 'log' | 'info' | 'print' | 'warn' | 'error';
+/**
+ * Log level object
+ */
+export type LogLevelDetail = {
+  /**
+   * debug
+   */
+  debug: boolean;
+  /**
+   * log
+   */
+  log: boolean;
+  /**
+   * info
+   */
+  info: boolean;
+  /**
+   * print
+   */
+  print: boolean;
+  /**
+   * warn
+   */
+  warn: boolean;
+  /**
+   * error
+   */
+  error: boolean;
+};
+/**
+ * Logger init option
+ */
+export interface LoggerInitOption {
+  /**
+   * Whether in debug mode or not. In debug mode, the log prints to console.
+   */
+  debugMode?: boolean;
+  /**
+   * The external tracking ID.
+   */
+  trackingId?: string;
+}
+
+/**
+ * Media playback file for audio or video input
+ */
+export interface MediaPlaybackFile {
+  /**
+   * Media playback file URL.
+   */
+  url: string;
+  /**
+   * Start time of file playback.
+   */
+  currentTime?: number;
+  /**
+   * Is loop
+   */
+  loop?: boolean;
+  /**
+   * Whether to play the audio file locally
+   */
+  playback?: boolean;
+}
+
+/**
+ * File transfer upload status
+ */
+export enum ChatFileUploadStatus {
+  /**
+   * Init
+   */
+  Init = 0,
+  /**
+   * InProgress
+   */
+  InProgress = 1,
+  /**
+   * Success
+   */
+  Success = 2,
+  /**
+   * Fail
+   */
+  Fail = 3,
+  /**
+   * Cancel
+   */
+  Cancel = 4,
+  /**
+   * Complete
+   */
+  Complete = 5,
+}
+/**
+ * File transfer download status
+ */
+export enum ChatFileDownloadStatus {
+  /**
+   * InProgress
+   */
+  InProgress = 1,
+  /**
+   * Success
+   */
+  Success = 2,
+  /**
+   * Fail
+   */
+  Fail = 3,
+  /**
+   * Cancel
+   */
+  Cancel = 4,
+}
+
+/**
+ * Summary status.
+ */
+export enum SummaryStatus {
+  /**
+   * Summary started.
+   */
+  Start = 'Start',
+  /**
+   * Summary paused.
+   */
+  Paused = 'Paused',
+  /**
+   * Summary stopped.
+   */
+  Stopped = 'Stopped',
+  /**
+   * default
+   */
+  Default = '',
+}
+
+/**
+ * Meeting query status.
+ */
+export enum MeetingQueryStatus {
+  /**
+   * Meeting query started.
+   */
+  Start = 'Start',
+  /**
+   * Meeting query paused.
+   */
+  Paused = 'Paused',
+  /**
+   * Meeting query stopped.
+   */
+  Stopped = 'Stopped',
+  /**
+   * default
+   */
+  Default = '',
+}
+/**
+ * The parent class of all source video stream processors.
+ * > ***Note***: Only available in the video processor worker.
+ *
+ * @category Global
+ */
+export abstract class VideoProcessor {
+  /**
+   * constructor
+   * @param port message port
+   * @param options customised options
+   */
+  public constructor(port: MessagePort, options?: any);
+  /**
+   * The communication port used for messaging between the processor and the main thread.
+   */
+  protected port: MessagePort;
+  /**
+   * Function to retrieve an OffscreenCanvas that renders the current output frame or processed result.
+   */
+  public getOutput(): OffscreenCanvas | null;
+  /**
+   * Callback triggered during the initialization of the processor.
+   */
+  public onInit(): void;
+  /**
+   * Callback triggered during the uninitialization of the processor.
+   */
+  public onUninit(): void;
+  /**
+   * Processes a video frame and optionally applies effects or modifications.
+   */
+  public abstract processFrame(
+    /**
+     * The input video frame to be processed.
+     */
+    input: VideoFrame,
+    /**
+     * The canvas where the processed frame is rendered.
+     */
+    output: OffscreenCanvas,
+  ): boolean | Promise<boolean>;
+}
+/**
+ * Native AudioWorkletProcessor type definition from browser，see https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor for details.
+ */
+declare abstract class AudioWorkletProcessor {
+  constructor(options?: any);
+  abstract process(
+    inputs: Array<Array<Float32Array>>,
+    outputs: Array<Array<Float32Array>>,
+    parameters: Record<string, Float32Array>,
+  ): boolean;
+  static parameterDescriptors?: Array<{
+    name: string;
+    defaultValue?: number;
+    minValue?: number;
+    maxValue?: number;
+    automationRate?: 'a-rate' | 'k-rate';
+  }>;
+}
+/**
+ * The parent class of all source audio stream processors.
+ * > ***Note***: AudioProcessor inherits from AudioWorkletProcessor and is only available in audio worklet processors.
+ *
+ * @category Global
+ */
+export abstract class AudioProcessor extends AudioWorkletProcessor {
+  /**
+   * constructor
+   * @param port message port
+   * @param options customised options
+   */
+  public constructor(port: MessagePort, options?: any);
+  /**
+   * The communication port used for messaging between the processor and the main thread.
+   */
+  public port: MessagePort;
+  /**
+   * Callback triggered during the initialization of the processor.
+   */
+  public onInit(): void;
+  /**
+   * Callback triggered during the uninitialization of the processor.
+   */
+  public onUninit(): void;
+}
+/**
+ * Base class for all source share stream processors.
+ * > ***Note***: Available only in the share processor worker.
+ *
+ * @category Global
+ */
+export abstract class ShareProcessor {
+  /**
+   * Creates a new `ShareProcessor`.
+   * @param port message port - The message port used for communication.
+   * @param options customised options - Optional processor configuration.
+   */
+  public constructor(port: MessagePort, options?: any);
+  /**
+   * The communication port used for messaging between the processor and the main thread.
+   */
+  protected port: MessagePort;
+  /**
+   * Retrieves the `OffscreenCanvas` that renders the current output frame or processed result.
+   */
+  public getOutput(): OffscreenCanvas | null;
+  /**
+   * Called when the processor is initializated.
+   */
+  public onInit(): void;
+  /**
+   * Called when the processor is uninitialized.
+   */
+  public onUninit(): void;
+  /**
+   * Processes a share frame and optionally applies effects or transformations.
+   *
+   * @param input - The input share frame to process.
+   * @param output - The canvas where the processed frame is rendered.
+   * @returns `true`/`false` or a `Promise` that resolves to a boolean
+   * indicating success or failure.
+   */
+  public abstract processFrame(
+    input: VideoFrame,
+    output: OffscreenCanvas,
+  ): boolean | Promise<boolean>;
+}
+/**
+ * Registers a custom processor class.
+ *> ***Note***: Only available in the processor worker.
+ * @param name The name of the processor
+ * @param processor The processor class
+ *
+ * @category Global
+ */
+export function registerProcessor(
+  name: string,
+  processor: typeof VideoProcessor | typeof AudioProcessor | typeof ShareProcessor,
+): void;
+/**
+ * Custom web component for video render
+ *
+ * @category Global
+ */
+export declare class VideoPlayer extends HTMLElement {
+  ['node-id']: string;
+  ['video-quality']: string;
+}
+/**
+ * Custom web component for video render container
+ *
+ * @category Global
+ */
+export declare class VideoPlayerContainer extends HTMLElement {}
+
+/**
+ * CRC device call out return code
+ */
+export enum CRCReturnCode {
+  /**
+   * Success
+   */
+  Success = 0,
+  /**
+   * Ringing
+   */
+  Ringing = 1,
+  /**
+   * Timeout
+   */
+  Timeout = 2,
+  /**
+   * Busy
+   */
+  Busy = 101,
+  /**
+   * Fail
+   */
+  Fail = 104,
+  /**
+   * Unreachable
+   */
+  Unreachable = 111,
+}
+/**
+ * CRC device protocol
+ */
+export enum CRCProtocol {
+  /**
+   * H323
+   */
+  H323 = 1,
+  /**
+   * SIP
+   */
+  SIP = 2,
+}
+
+/**
+ * Active media failed error code
+ */
+export enum ActiveMediaFailedCode {
+  /**
+   * Failed to establish the audio data channel.
+   */
+  AudioConnectionFailed = 101,
+  /**
+   * Audio track ended.
+   */
+  AudioStreamEnded = 102,
+  /**
+   * Microphone permission denied.
+   */
+  MicrophonePermissionReset = 103,
+  /**
+   * Failed to get audio data from the stream.
+   */
+  AudioStreamFailed = 104,
+  /**
+   * Microphone muted in the system.
+   */
+  MicrophoneMuted = 105,
+  /**
+   * Sent audio playback was interrupted.
+   */
+  AudioStreamMuted = 106,
+  /**
+   * Remote audio playback was interrupted.
+   */
+  AudioPlaybackInterrupted = 107,
+  /**
+   * Failed to establish the video data channel.
+   */
+  VideoConnectionFailed = 201,
+  /**
+   * Video track ended.
+   */
+  VideoStreamEnded = 202,
+  /**
+   * Camera permission denied.
+   */
+  CameraPermissionReset = 203,
+  /**
+   * WebGL context invalid.
+   */
+  WebGlContextInvalid = 204,
+  /**
+   * Out of memory
+   */
+  WasmOutOfMemory = 205,
+  /**
+   * Failed to get video data from the stream.
+   */
+  VideoStreamFailed = 206,
+  /**
+   * Video stream was interrupted.
+   */
+  VideoStreamMuted = 207,
+  /**
+   * Failed to get sharing data from the stream.
+   */
+  SharingStreamFailed = 301,
+}
+
+/**
+ * Processor type
+ */
+type MediaType = 'audio' | 'video' | 'share';
+
+/**
+ * Processor instance
+ */
+export interface Processor {
+  /**
+   * Processor name
+   */
+  name: string;
+  /**
+   * Processor type
+   */
+  type: MediaType;
+  /**
+   * Communication interface with processor
+   */
+  port: MessagePort;
+}
+
+/**
+ * Defines the parameters required to initialize a media processor.
+ */
+export interface ProcessorParams {
+  /**
+   * Absolute URL of the processor script.
+   * The script must be hosted on the same origin or have CORS enabled to allow cross-origin loading.
+   */
+  url: string;
+  /**
+   * Unique name of the processor.
+   * Used to identify and register the processor implementation.
+   */
+  name: string;
+  /**
+   * Specifies the processor category.
+   * Determines which media pipeline the processor integrates with:
+   * - `video`: Processes camera frames before encoding or transmission.
+   * - `audio`: Processes microphone input or playback streams.
+   * - `share`: Processes screen-share frames before distribution.
+   */
+  type: MediaType;
+  /**
+   * Parameters to pass into the processor constructor
+   */
+  options?:
+    | {
+        /**
+         * Controls the video frame capture strategy for Share
+         * Processors only.
+         *
+         * - `true`: Forces a fixed frame rate capture from the Canvas, ensuring consistent output even when the source produces few frames. Recommended for use cases such as recording, encoding, or AI-based frame analysis where uniform timing is important.
+         *
+         * - `false` or `undefined`: Uses the browser’s native
+         *   MediaStreamTrackProcessor/MediaStreamTrackGenerator (if supported), following the source’s natural frame rate. This approach reduces CPU usage and latency for dynamic or frequently changing content.
+         *
+         * Provides developers with control over frame timing
+         * consistency, balancing performance and stability.
+         */
+        needFixedCaptureRate?: boolean;
+        /**
+         * Additional custom parameters for processor-specific configuration.
+         */
+        [key: string]: any;
+      }
+    | any;
+}
+/**
+ * System CPU pressure level indicating current CPU usage intensity.
+ * Used to monitor system performance and adjust media processing accordingly.
+ */
+export enum SystemCPUPressureLevel {
+  /**
+   * Nominal - Low CPU usage (under 30% load)
+   * System is running smoothly with plenty of available resources.
+   */
+  Nominal = 0,
+  /**
+   * Fair - Moderate CPU usage (30-60% load)
+   * System is handling workload well but resources are being utilized.
+   */
+  Fair = 1,
+  /**
+   * Serious - High CPU usage (60-90% load)
+   * System is under significant load, may need to reduce processing quality.
+   */
+  Serious = 2,
+  /**
+   * Critical - Very high CPU usage (90% or higher)
+   * System is under severe stress, immediate action recommended to prevent performance degradation.
+   */
+  Critical = 3,
+}
+/**
+ * Language.
+ */
+interface Language {
+  /**
+   * Language code.
+   */
+  code: string;
+  /**
+   * Language name.
+   */
+  name: string;
+}
+type RTCStatsTypes =
+  | RTCInboundRtpStreamStats
+  | RTCOutboundRtpStreamStats
+  | RTCRemoteInboundRtpStreamStats
+  | RTCRemoteOutboundRtpStreamStats
+  | RTCAudioSourceStats
+  | RTCVideoSourceStats;
+
+type RTCStatsExtended = RTCStatsTypes & {
+  nodeId: string;
+  isSharing: boolean;
+};
+/**
+ * Statistics report for WebRTC statistics
+ */
+export type StatsReport = Map<string, RTCStatsExtended>;
+
+/**
+ * Extended WebRTC statistics interfaces for newer RTCStats types
+ * These types might not be available in all TypeScript DOM definitions
+ */
+
+/**
+ * Statistics for remote inbound RTP streams (remote side receiving our data)
+ * Provides metrics about how the remote peer is receiving our transmitted data
+ */
+declare global {
+  interface RTCRemoteInboundRtpStreamStats extends RTCReceivedRtpStreamStats {
+    kind: string;
+    localId?: string;
+    roundTripTime?: number;
+    totalRoundTripTime?: number;
+    fractionLost?: number;
+    roundTripTimeMeasurements?: number;
+  }
+
+  /**
+   * Statistics for remote outbound RTP streams (remote side sending data to us)
+   * Provides metrics about the remote peer's transmission to us
+   */
+  interface RTCRemoteOutboundRtpStreamStats extends RTCSentRtpStreamStats {
+    kind: string;
+    localId?: string;
+    remoteTimestamp?: DOMHighResTimeStamp;
+    reportsSent?: number;
+    roundTripTime?: number;
+    totalRoundTripTime?: number;
+    roundTripTimeMeasurements?: number;
+  }
+
+  /**
+   * Statistics for audio source (microphone input)
+   * Provides metrics about audio capture and processing
+   */
+  interface RTCAudioSourceStats extends RTCStats {
+    kind: 'audio';
+    trackIdentifier: string;
+    audioLevel?: number;
+    totalAudioEnergy?: number;
+    totalSamplesDuration?: number;
+    echoReturnLoss?: number;
+    echoReturnLossEnhancement?: number;
+    droppedSamplesDuration?: number;
+    droppedSamplesEvents?: number;
+    totalCaptureDelay?: number;
+    totalSamplesCaptured?: number;
+  }
+
+  /**
+   * Statistics for video source (camera input)
+   * Provides metrics about video capture and processing
+   */
+  interface RTCVideoSourceStats extends RTCStats {
+    kind: 'video';
+    trackIdentifier: string;
+    width?: number;
+    height?: number;
+    frames?: number;
+    framesPerSecond?: number;
+    framesDropped?: number;
+  }
+}
