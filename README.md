@@ -1,21 +1,22 @@
 # Zoom SDK Laravel API — POC Backend
 
-Bu proje, **Iceberg Lifecycle CRM** için Zoom SDK entegrasyonunun Laravel backend POC'udur.
-Amaç, Zoom SDK auth akışının (Meeting SDK JWT + OAuth) uçtan uca çalıştığını kanıtlamaktır.
+This project is a Laravel backend POC for Zoom SDK integration tailored for **Iceberg Lifecycle CRM**.
+The objective is to demonstrate an end-to-end working Zoom SDK authentication flow (Meeting SDK JWT + OAuth + Video SDK Token).
 
-## Genel Bakış
+## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      Iceberg CRM Frontend                           │
-│  zoom-msdk-poc/index.html  ──────── zoom-vsdk-poc/index.html        │
+│     public/msdk/index.html     ────────     public/vsdk/index.html  │
 └────────────┬───────────────────────────────────┬────────────────────┘
-             │ POST /api/zoom/meeting-auth        │ (future: video token)
+             │ POST /api/zoom/meeting-auth        │ POST /api/zoom/token
              ▼                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     laravel-api/ (this project)                     │
+│                     iceberg-zoom-sdk (Laravel)                      │
 │                                                                     │
 │  MeetingAuthController ── ZoomJwtService (firebase/php-jwt)         │
+│  VideoSessionController── ZoomJwtService (Video SDK tokens)         │
 │  OAuthController       ── ZoomOAuthService (Http facade)            │
 │  WebhookController     ── ProcessZoomWebhookEvent (Queue)           │
 │  ZoomMeetingService    ── Zoom REST API v2                          │
@@ -33,39 +34,38 @@ Amaç, Zoom SDK auth akışının (Meeting SDK JWT + OAuth) uçtan uca çalışt
 
 ---
 
-## Kurulum
+## Installation
 
-### 1. Bağımlılıkları yükle
+### 1. Install Dependencies
 
 ```bash
-cd laravel-api
 composer install
 ```
 
-### 2. Ortam dosyasını hazırla
+### 2. Prepare Environment File
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-> `APP_KEY` değeri Laravel'in `encrypted` cast ile token şifrelemesinde kullanılır.
-> Değiştirilirse veritabanındaki mevcut tokenlar okunamaz hale gelir.
+> The `APP_KEY` value is used by Laravel's `encrypted` cast for token encryption.
+> Changing it will make existing stored database tokens unreadable.
 
-### 3. `.env` dosyasını doldur
+### 3. Configure `.env`
 
-Aşağıdaki bölümleri sırayla doldurun (detaylar için ilgili Zoom adımlarına bakın):
+Fill in the following sections sequentially (refer to the corresponding Zoom setup steps for details):
 
 ```dotenv
 # PostgreSQL — Neon
 DB_CONNECTION=pgsql
 DB_HOST=<neon-host>.neon.tech
 DB_PORT=5432
-DB_DATABASE=<veritabani-adi>
-DB_USERNAME=<kullanici-adi>
-DB_PASSWORD=<sifre>
+DB_DATABASE=<database-name>
+DB_USERNAME=<username>
+DB_PASSWORD=<password>
 
-# Meeting SDK
+# Meeting SDK & Video SDK
 ZOOM_SDK_CLIENT_ID=<sdk-client-id>
 ZOOM_SDK_CLIENT_SECRET=<sdk-client-secret>
 
@@ -78,91 +78,103 @@ ZOOM_OAUTH_REDIRECT_URI=http://localhost:8000/zoom/oauth/callback
 ZOOM_WEBHOOK_SECRET_TOKEN=<webhook-secret-token>
 ```
 
-### 4. Veritabanı
+### 4. Database
 
-Tablolar Neon üzerinde zaten oluşturulmuş durumda (migration gerekmez):
+Tables are already created on Neon (no migration needed):
 
 - `zoom_oauth_tokens`
 - `zoom_meetings`
 - `zoom_video_sessions`
 - `zoom_webhook_events`
 
-Bağlantıyı doğrulamak için:
+To verify the database connection:
 
 ```bash
 php artisan db:show
 ```
 
-### 5. Sunucuyu başlat
+### 5. Start the Server
+
+You can use the provided startup script:
+
+```bash
+./start.sh
+```
+
+Or run the Laravel development server manually:
 
 ```bash
 php artisan serve
 # → http://localhost:8000
 ```
 
+Frontend POC interfaces:
+- **Meeting SDK POC**: `http://localhost:8000/msdk/`
+- **Video SDK POC**: `http://localhost:8000/vsdk/`
+
 ---
 
-## Zoom Marketplace App Oluşturma
+## Creating a Zoom Marketplace App
 
-### Adım 1 — General App oluştur
+### Step 1 — Create a General App
 
-1. [marketplace.zoom.us](https://marketplace.zoom.us) → **Develop** → **Build App**
-2. **General App** seç → isme ver → **Create**
+1. Go to [marketplace.zoom.us](https://marketplace.zoom.us) → **Develop** → **Build App**
+2. Select **General App** → Enter an app name → Click **Create**
 
-### Adım 2 — Meeting SDK özelliğini ekle
+### Step 2 — Add Meeting SDK Feature
 
-1. App sayfasında **Feature** sekmesine git
-2. **Meeting SDK** bölümünü etkinleştir
-3. **Client ID** ve **Client Secret** değerlerini al → `.env`'e yaz:
-   ```
+1. Navigate to the **Feature** tab on the app page
+2. Enable the **Meeting SDK** section
+3. Retrieve **Client ID** and **Client Secret** → Add them to `.env`:
+   ```dotenv
    ZOOM_SDK_CLIENT_ID=...
    ZOOM_SDK_CLIENT_SECRET=...
    ```
 
-### Adım 3 — OAuth özelliğini ekle
+### Step 3 — Add OAuth Feature
 
-1. **Feature** → **OAuth** bölümünü etkinleştir
-2. **Redirect URL** ekle: `http://localhost:8000/zoom/oauth/callback`
-3. **Client ID** ve **Client Secret** değerlerini al → `.env`'e yaz:
-   ```
+1. Under **Feature**, enable the **OAuth** section
+2. Add **Redirect URL**: `http://localhost:8000/zoom/oauth/callback`
+3. Retrieve **Client ID** and **Client Secret** → Add them to `.env`:
+   ```dotenv
    ZOOM_OAUTH_CLIENT_ID=...
    ZOOM_OAUTH_CLIENT_SECRET=...
    ```
 
-### Adım 4 — Gerekli OAuth Scope'larını ekle
+### Step 4 — Add Required OAuth Scopes
 
-**Scopes** sekmesinde şu scope'ları ekle:
+Add the following scopes in the **Scopes** tab:
 
-| Scope | Gerekçe |
+| Scope | Purpose |
 |---|---|
-| `user:read:zak` | ZAK (Zoom Access Key) almak için |
-| `user:read:token` | OBF (On-Behalf-Of) token almak için |
-| `meeting:write:meeting` | Meeting oluşturmak için |
-| `meeting:read:meeting` | Meeting bilgisi çekmek için |
+| `user:read:zak` | Required to obtain ZAK (Zoom Access Key) |
+| `user:read:token` | Required to obtain OBF (On-Behalf-Of) token |
+| `meeting:write:meeting` | Required to create meetings |
+| `meeting:read:meeting` | Required to fetch meeting information |
 
-### Adım 5 — Webhook endpoint'ini ekle
+### Step 5 — Add Webhook Endpoint
 
-1. **Feature** → **Event Subscriptions** → **+ Add Event Subscription**
+1. Navigate to **Feature** → **Event Subscriptions** → **+ Add Event Subscription**
 2. **Event notification endpoint URL**: `https://<your-domain>/api/zoom/webhook`
-   - Yerel geliştirme için [ngrok](https://ngrok.com/) kullanabilirsiniz:
+   - For local development, you can use [ngrok](https://ngrok.com/):
      ```bash
      ngrok http 8000
      # → https://xxxx.ngrok.io/api/zoom/webhook
      ```
-3. **Secret Token** değerini al → `.env`'e yaz:
-   ```
+3. Retrieve the **Secret Token** value → Add it to `.env`:
+   ```dotenv
    ZOOM_WEBHOOK_SECRET_TOKEN=...
    ```
-4. İstediğiniz event'leri ekleyin (ör. `meeting.started`, `meeting.ended`, `recording.completed`)
-5. **Validate** butonuna tıkla — Laravel backend URL validation challenge'ını otomatik yanıtlar.
+4. Subscribe to the desired events (e.g., `meeting.started`, `meeting.ended`, `recording.completed`)
+5. Click **Validate** — The Laravel backend automatically handles and responds to the URL validation challenge.
 
 ---
 
-## API Referansı
+## API Reference
 
 ### `POST /api/zoom/meeting-auth`
 
-Meeting SDK JWT imzası üretir. Frontend, `ZoomMtg.join()` çağrısından önce bunu çağırır.
+Generates a Meeting SDK JWT signature. The frontend invokes this endpoint prior to calling `ZoomMtg.join()`.
 
 **Request:**
 ```json
@@ -172,7 +184,7 @@ Meeting SDK JWT imzası üretir. Frontend, `ZoomMtg.join()` çağrısından önc
 }
 ```
 
-`role`: `0` = katılımcı, `1` = host
+`role`: `0` = attendee, `1` = host
 
 **Response (200):**
 ```json
@@ -182,13 +194,36 @@ Meeting SDK JWT imzası üretir. Frontend, `ZoomMtg.join()` çağrısından önc
 }
 ```
 
-> Client Secret **asla** response'a dahil edilmez.
+> The Client Secret is **never** included in the response.
+
+---
+
+### `POST /api/zoom/token`
+
+Generates a Video SDK session token.
+
+**Request:**
+```json
+{
+  "sessionName": "my-session-name",
+  "role": 1
+}
+```
+
+`role`: `0` = participant, `1` = host
+
+**Response (200):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
 
 ---
 
 ### `GET /zoom/oauth/redirect`
 
-Kullanıcıyı Zoom consent ekranına yönlendirir.
+Redirects the user to the Zoom consent screen.
 
 **Query params (POC):**
 ```
@@ -199,86 +234,93 @@ Kullanıcıyı Zoom consent ekranına yönlendirir.
 
 ### `GET /zoom/oauth/callback`
 
-Zoom'dan dönen code'u token'a çevirir ve veritabanına kaydeder.
+Exchanges the authorization code returned by Zoom for an access token and stores it in the database.
 
 ---
 
 ### `POST /api/zoom/webhook`
 
-Zoom webhook olaylarını alır. CSRF korumasından muaftır — güvenlik HMAC imzasıyla sağlanır.
+Receives Zoom webhook events. Excluded from CSRF protection — security is validated via HMAC signature verification.
 
 ---
 
-## Testleri Çalıştırma
+## Running Tests
 
 ```bash
-cd laravel-api
-
-# Sadece Zoom JWT testleri
+# Run only Zoom JWT tests
 php artisan test --filter=ZoomJwtServiceTest
 
-# Tüm testler
+# Run all test suites
 php artisan test
 ```
 
-### Test coverage özeti
+### Test Coverage Summary
 
-`ZoomJwtServiceTest` şunları doğrular:
-- `exp - iat` değerinin `[1800, 172800]` aralığında olduğu
-- Configured TTL değerinin kullanıldığı
-- `sdkKey`, `appKey`, `mn`, `role`, `tokenExp` alanlarının doğru set edildiği
-- `iat`'ın 30 saniye geride olduğu (clock skew koruması)
-- HS256 algoritmasının kullanıldığı
-- Geçersiz role, TTL ve boş credential'ların exception fırlattığı
-- 1800, 7200 ve 172800 saniyelik tüm geçerli TTL değerlerinin çalıştığı
+`ZoomJwtServiceTest` validates:
+- `exp - iat` duration falls within the required range `[1800, 172800]`
+- Configured TTL value is strictly respected
+- `sdkKey`, `appKey`, `mn`, `role`, and `tokenExp` fields are properly set
+- `iat` is set 30 seconds in the past to prevent clock skew issues
+- HS256 algorithm is used for signing
+- Invalid roles, out-of-range TTLs, and missing credentials trigger exceptions
+- All valid TTL thresholds (1800, 7200, and 172800 seconds) pass correctly
+- Valid Video SDK session tokens are generated with appropriate claims
 
 ---
 
-## Güvenlik Notları
+## Security Best Practices
 
-| Kural | Uygulama |
+| Rule | Implementation |
 |---|---|
-| SDK/OAuth Client Secret'ları sadece backend'de | `config('zoom.*')` üzerinden, asla response'a girmez |
-| Token'lar şifreli saklanır | `'encrypted'` cast (AES-256-CBC, APP_KEY ile) |
-| Token'lar log'a girmez | `$hidden = ['access_token_enc', 'refresh_token_enc']` |
-| Timing-safe karşılaştırma | `hash_equals()` — webhook imzası için |
-| Replay attack koruması | 5 dakika timestamp penceresi |
-| Zoom hata 124 = yeniden auth | Retry yok, `ZoomReauthorizationRequiredException` fırlatılır |
-| JWT her istekte yeniden üretilir | Cache yok |
-| ZAK/OBF DB'ye kaydedilmez | Kısa ömürlü, kullanılmadan hemen önce çekilir |
+| SDK / OAuth Client Secrets kept strictly on backend | Accessed via `config('zoom.*')`, never exposed in responses |
+| Tokens stored encrypted | Laravel `'encrypted'` cast (AES-256-CBC with `APP_KEY`) |
+| Tokens excluded from logs / serialization | `$hidden = ['access_token_enc', 'refresh_token_enc']` |
+| Timing-safe signature comparison | `hash_equals()` used for webhook verification |
+| Replay attack prevention | 5-minute timestamp validity window |
+| Zoom Error 124 triggers re-authorization | No infinite retries; throws `ZoomReauthorizationRequiredException` |
+| JWT regenerated per request | No caching for auth signatures |
+| ZAK / OBF tokens not persisted to DB | Short-lived, fetched on-demand immediately before use |
 
 ---
 
-## Proje Yapısı
+## Project Structure
 
 ```
-laravel-api/
+.
 ├── app/
 │   ├── Exceptions/Zoom/
 │   │   └── ZoomReauthorizationRequiredException.php
 │   ├── Http/Controllers/Zoom/
 │   │   ├── MeetingAuthController.php   ← POST /api/zoom/meeting-auth
+│   │   ├── VideoSessionController.php  ← POST /api/zoom/token
 │   │   ├── OAuthController.php         ← GET /zoom/oauth/redirect|callback
 │   │   └── WebhookController.php       ← POST /api/zoom/webhook
 │   ├── Jobs/
-│   │   └── ProcessZoomWebhookEvent.php ← Async webhook işleme
+│   │   └── ProcessZoomWebhookEvent.php ← Async webhook processing
 │   ├── Models/
 │   │   ├── ZoomMeeting.php
 │   │   ├── ZoomOauthToken.php          ← 'encrypted' cast
 │   │   ├── ZoomVideoSession.php
 │   │   └── ZoomWebhookEvent.php        ← 'array' cast (JSONB)
 │   └── Services/Zoom/
-│       ├── ZoomJwtService.php          ← Meeting SDK JWT üretimi
+│       ├── ZoomJwtService.php          ← Meeting & Video SDK JWT token generation
 │       ├── ZoomMeetingService.php      ← Meeting CRUD (Zoom REST API)
-│       ├── ZoomOAuthService.php        ← OAuth code flow + token saklama
-│       └── ZoomTokenService.php        ← ZAK / OBF (saklanmaz)
+│       ├── ZoomOAuthService.php        ← OAuth code flow + token storage
+│       └── ZoomTokenService.php        ← ZAK / OBF (not stored)
 ├── bootstrap/
-│   └── app.php                         ← API routing + CSRF muafiyet
+│   └── app.php                         ← API routing + CSRF exemptions
 ├── config/
-│   └── zoom.php                        ← Tüm Zoom konfigürasyonu
+│   └── zoom.php                        ← Zoom configuration
+├── public/
+│   ├── msdk/                           ← Meeting SDK Frontend POC
+│   └── vsdk/                           ← Video SDK Frontend POC
 ├── routes/
-│   ├── api.php                         ← API route'ları
-│   └── web.php                         ← OAuth web route'ları
-└── tests/Unit/
-    └── ZoomJwtServiceTest.php          ← 11 unit test
+│   ├── api.php                         ← API routes
+│   └── web.php                         ← OAuth web routes & aliases
+├── start.sh                            ← Dev server starter script
+└── tests/
+    ├── Feature/
+    │   └── ZoomAuthEndpointsTest.php   ← Auth endpoints feature tests
+    └── Unit/
+        └── ZoomJwtServiceTest.php      ← Unit tests for JWT generation
 ```
