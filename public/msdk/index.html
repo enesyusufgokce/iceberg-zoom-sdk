@@ -50,10 +50,6 @@
   <h1>Zoom Meeting SDK - Client View POC</h1>
 
   <form id="join-form">
-    <label>
-      Client ID (SDK Key)
-      <input type="text" id="clientId" placeholder="PLACEHOLDER_CLIENT_ID" />
-    </label>
 
     <label>
       Meeting Number
@@ -119,7 +115,6 @@
       e.preventDefault();
       clearError();
 
-      var clientId = document.getElementById('clientId').value.trim();
       var meetingNumber = document.getElementById('meetingNumber').value.replace(/[\s\-]/g, '');
       var passcode = document.getElementById('passcode').value.trim();
       var displayName = document.getElementById('displayName').value.trim();
@@ -135,17 +130,12 @@
       try {
         var authData = await getSignature(meetingNumber, 0);
         var signature = authData.signature;
-        var sdkKey = clientId || authData.sdkKey;
+        var sdkKey = authData.sdkKey;
 
         if (!sdkKey) {
-          showError('Client ID (SDK Key) ne backendde ne de formda tanımlı.');
+          showError('Backend sdkKey döndürmedi. .env ZOOM_SDK_CLIENT_ID değerini kontrol edin.');
           joinBtn.disabled = false;
           return;
-        }
-
-        // Form alanını da doldur
-        if (!clientId && authData.sdkKey) {
-          document.getElementById('clientId').value = authData.sdkKey;
         }
 
         ZoomMtg.setZoomJSLib('https://source.zoom.us/6.2.0/lib', '/av');
