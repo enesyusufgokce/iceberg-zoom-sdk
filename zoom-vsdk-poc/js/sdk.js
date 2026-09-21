@@ -26,7 +26,7 @@ export async function initSDK() {
 export async function generateSessionToken(sessionName, role = 1) {
   console.info('[SDK] generateSessionToken:', sessionName, 'role:', role);
   try {
-    const res = await fetch('http://localhost:3001/api/zoom/token', {
+    const res = await fetch('http://localhost:8080/api/zoom/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionName, role }),
@@ -39,7 +39,7 @@ export async function generateSessionToken(sessionName, role = 1) {
     return token;
   } catch (err) {
     if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-      throw new Error('Token sunucusuna bağlanılamadı (http://localhost:3001). Lütfen "node token-server.js" komutunun çalıştığından emin olun.');
+      throw new Error('Token sunucusuna bağlanılamadı (http://localhost:8080). Lütfen go-backend\'in çalıştığından emin olun.');
     }
     throw err;
   }

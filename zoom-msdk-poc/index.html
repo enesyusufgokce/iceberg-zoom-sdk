@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Zoom Meeting SDK - Client View POC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
 <!-- Zoom Web Meeting SDK (Client View) - v6.2.0 -->
 <script src="https://source.zoom.us/6.2.0/lib/vendor/react.min.js"></script>
@@ -14,72 +17,193 @@
 <script src="https://source.zoom.us/6.2.0/zoom-meeting-6.2.0.min.js"></script>
 
 <style>
+  /* Iceberg Palette (#EDF4FA, #F6F6F8, #E6007E, #101726, #8F9298, #FFFFFF)
+     Same design tokens as zoom-vsdk-poc/style.css, kept minimal for a
+     single join form rather than a full app stylesheet. */
+  :root {
+    --ice-tint:         #EDF4FA;
+    --ice-bg:           #F6F6F8;
+    --ice-accent:       #E6007E;
+    --ice-accent-hover: #CE0070;
+    --ice-accent-glow:  rgba(230, 0, 126, 0.22);
+    --ice-navy:         #101726;
+    --ice-slate:        #8F9298;
+    --ice-slate-light:  #E2E5EA;
+    --ice-white:        #FFFFFF;
+    --clr-danger:       #EF4444;
+    --clr-danger-glow:  rgba(239, 68, 68, 0.08);
+    --r-md:  10px;
+    --r-lg:  14px;
+    --r-xl:  18px;
+    --shadow-lg: 0 16px 36px -4px rgba(16, 23, 38, 0.07), 0 4px 12px -2px rgba(16, 23, 38, 0.03);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
   body {
-    font-family: system-ui, sans-serif;
-    max-width: 480px;
-    margin: 40px auto;
-    padding: 0 16px;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(circle at 50% 0%, var(--ice-tint) 0%, var(--ice-bg) 65%);
+    color: var(--ice-navy);
+    min-height: 100dvh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
   }
-  h1 { font-size: 1.2rem; }
-  label { display: block; margin-top: 12px; font-size: 0.9rem; }
-  input {
+
+  .lobby-card {
     width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    margin-top: 4px;
+    max-width: 420px;
+    background: var(--ice-white);
+    border: 1px solid var(--ice-slate-light);
+    border-radius: var(--r-xl);
+    padding: 32px 32px 24px;
+    box-shadow: var(--shadow-lg);
   }
+
+  .lobby-header { text-align: center; margin-bottom: 24px; }
+
+  .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--ice-accent);
+    border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px var(--ice-accent-glow);
+  }
+
+  .logo-icon svg { width: 20px; height: 20px; color: #fff; }
+
+  .logo-text { font-size: 1.35rem; font-weight: 500; letter-spacing: -0.02em; color: var(--ice-navy); }
+  .logo-text strong { font-weight: 700; color: var(--ice-accent); }
+
+  .lobby-subtitle { font-size: 0.82rem; color: var(--ice-slate); letter-spacing: 0.02em; margin: 0; }
+
+  .form-group { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ice-navy);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    background: var(--ice-white);
+    border: 1px solid var(--ice-slate-light);
+    border-radius: var(--r-md);
+    color: var(--ice-navy);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
+  }
+
+  input[type="text"]::placeholder { color: #9BA0A8; }
+
+  input[type="text"]:focus {
+    border-color: var(--ice-accent);
+    box-shadow: 0 0 0 3px var(--ice-accent-glow);
+  }
+
   button {
-    margin-top: 20px;
-    padding: 10px 16px;
+    font-family: inherit;
     cursor: pointer;
+    border: none;
   }
+
+  .btn-join {
+    width: 100%;
+    margin-top: 8px;
+    padding: 0.7rem 1.5rem;
+    background: var(--ice-accent);
+    color: #fff;
+    border-radius: var(--r-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    box-shadow: 0 2px 10px var(--ice-accent-glow);
+    transition: background 140ms var(--ease), box-shadow 140ms var(--ease), transform 140ms var(--ease);
+  }
+
+  .btn-join:hover:not(:disabled) {
+    background: var(--ice-accent-hover);
+    box-shadow: 0 4px 16px var(--ice-accent-glow);
+  }
+
+  .btn-join:active:not(:disabled) { transform: scale(0.98); }
+
+  .btn-join:disabled { opacity: 0.6; cursor: not-allowed; }
+
   #error-box {
     margin-top: 16px;
-    padding: 10px;
-    background: #fdecea;
-    color: #611a15;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
+    padding: 10px 12px;
+    background: var(--clr-danger-glow);
+    color: var(--clr-danger);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--r-md);
     display: none;
     white-space: pre-wrap;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
 </style>
 </head>
 <body>
-  <h1>Zoom Meeting SDK - Client View POC</h1>
+  <div class="lobby-card">
+    <header class="lobby-header">
+      <div class="logo" aria-label="Iceberg Meeting SDK POC logo">
+        <div class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+        </div>
+        <span class="logo-text">Meeting <strong>SDK</strong></span>
+      </div>
+      <p class="lobby-subtitle">Client View Integration — Proof of Concept</p>
+    </header>
 
-  <form id="join-form">
-    <label>
-      Client ID (SDK Key)
-      <input type="text" id="clientId" placeholder="PLACEHOLDER_CLIENT_ID" />
-    </label>
+    <form id="join-form">
+      <div class="form-group">
+        <label for="clientId">Client ID (SDK Key)</label>
+        <input type="text" id="clientId" placeholder="PLACEHOLDER_CLIENT_ID" autocomplete="off" spellcheck="false" />
+      </div>
 
-    <label>
-      Meeting Number
-      <input type="text" id="meetingNumber" placeholder="e.g. 1234567890" />
-    </label>
+      <div class="form-group">
+        <label for="meetingNumber">Meeting Number</label>
+        <input type="text" id="meetingNumber" placeholder="e.g. 1234567890" autocomplete="off" />
+      </div>
 
-    <label>
-      Passcode
-      <input type="text" id="passcode" placeholder="meeting passcode" />
-    </label>
+      <div class="form-group">
+        <label for="passcode">Passcode</label>
+        <input type="text" id="passcode" placeholder="meeting passcode" autocomplete="off" />
+      </div>
 
-    <label>
-      Display Name
-      <input type="text" id="displayName" placeholder="your name" />
-    </label>
+      <div class="form-group">
+        <label for="displayName">Display Name</label>
+        <input type="text" id="displayName" placeholder="your name" autocomplete="off" />
+      </div>
 
-    <button type="submit" id="join-btn">Join</button>
-  </form>
+      <button type="submit" id="join-btn" class="btn-join">Join Meeting</button>
+    </form>
 
-  <div id="error-box"></div>
+    <div id="error-box"></div>
+  </div>
 
   <!-- Zoom SDK requires this element to render the meeting UI -->
   <div id="zmmtg-root"></div>
 
   <script>
-    var JWT_ENDPOINT = 'http://localhost:4000/jwt';
+    var JWT_ENDPOINT = 'http://localhost:8080/api/zoom/meeting-auth';
     var LEAVE_URL = 'http://localhost:3000';
 
     var errorBox = document.getElementById('error-box');
